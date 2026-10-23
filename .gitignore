@@ -20,3 +20,7 @@ calibration/*
 .DS_Store
 
 .cache/
+
+DerivedData/
+xcuserdata/
+*.xcuserstate

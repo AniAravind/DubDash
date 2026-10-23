@@ -33,6 +33,73 @@ use `--device cpu` if that backend fails. Adjust the detection threshold with
 See [Ultralytics prediction documentation](https://docs.ultralytics.com/modes/predict/)
 for the underlying detector API.
 
+## iPhone 16 sensor-depth demo
+
+Use the iPhone's **front TrueDepth camera** and the Mac YOLO viewer over local
+Wi-Fi. Start the receiver with:
+
+```bash
+python scripts/webcam_people.py --source iphone
+```
+
+Install the included Xcode app on your phone, then enter the Mac address and token
+printed by the viewer. See [the complete iPhone setup and validation guide](docs/iphone-depth.md).
+The GUI shows people with sensor-based surface distances, or `depth unavailable`;
+press **D** for a depth alignment overlay. No person-height estimate is used in
+this mode. Physical iPhone accuracy and alignment testing is still pending.
+
+## Distances in the laptop webcam window
+
+The webcam now overlays `person 92% | ~2.3 m`. This is **approximate monocular
+optical-axis distance**, based on projected person height, not stereo depth or
+an independently measured range. A single image cannot determine absolute scale
+without a known size or distance.
+
+### Quick setup without a checkerboard
+
+```bash
+python scripts/webcam_people.py --reference-distance 2 --person-height 1.7
+```
+
+Measure 2 metres from the camera to a standing person whose height is 1.7 metres
+(or change both numbers to your measurements). Keep their entire body in view,
+with exactly one person visible, then press **C**. Distances appear immediately
+and the reference saves to `calibration/webcam.json` for future runs. Press C
+again to replace a reference. No arbitrary focal length is used before calibration.
+
+Reference mode assumes subsequent people have the same standing height as the
+reference person. A seated, bent or partly hidden person gives misleading results;
+use full standing bodies. Boxes touching image edges show `distance unavailable`.
+No automatic pose/occlusion validation is implemented. A laptop showing only a
+face or torso cannot use this full-height method reliably.
+
+### Lens calibration with OpenCV (optional, more complete)
+
+Use a flat checkerboard with **9x6 inner corners** (10x7 squares), print at actual
+size and measure each square. For 25 mm squares:
+
+```bash
+python scripts/calibrate_webcam.py --columns 9 --rows 6 --square-size 0.025
+```
+
+Keep the full board visible and press **Space** for each capture. Collect at
+least 15 varied positions, distances and tilts covering the image, then press
+**C** to solve and save. Near-duplicate captures are rejected. Reprojection RMS
+must be at most 1 pixel; this is a fit check, not a distance-accuracy guarantee.
+This replaces the quick-reference file. Restart `webcam_people.py` to use it.
+The viewer corrects lens distortion before detection and uses calibrated vertical
+focal length with `--person-height` (default 1.7 m) for distance estimates.
+
+Keep the same camera, resolution, zoom and crop settings; disable Center Stage
+and other automatic framing effects. Camera/resolution mismatches are rejected;
+zoom/cropping changes require recalibration even when resolution stays the same.
+Calibration files stay local and are excluded from git.
+
+Validate the overlay against tape-measured distances at several positions. Height
+variation, pose, camera tilt, occlusion and bounding-box jitter all affect accuracy.
+The implemented relation is `distance = focal_y_pixels * person_height_m / box_height_pixels`.
+Lens calibration follows [OpenCV's calibration workflow](https://docs.opencv.org/4.10.0/dc/dbb/tutorial_py_calibration.html).
+
 ## Included
 
 - Stereo rectification, disparity and point-cloud launch configuration.
@@ -141,11 +208,12 @@ provided.
 
 ## Development
 
-Policy tests run without ROS using Python and pytest:
+Tests run without ROS using Python, pytest and the webcam dependencies:
 
 ```bash
+python3 -m pip install pytest==8.3.5 -r requirements-webcam.txt
 python3 -m pytest -q
-python3 -m compileall -q src
+python3 -m compileall -q src scripts
 ```
 
 See [the four-week plan](docs/milestones.md). Project license is undecided;
