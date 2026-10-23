@@ -5,6 +5,34 @@ Targets **JetPack 6 / Ubuntu 22.04 / ROS 2 Humble / Python 3.10**. Confirm the
 installed JetPack before installing ROS. This repository is an integration
 starter; autonomous driving is not yet implemented or validated.
 
+## Try it now with your laptop camera (no ROS)
+
+Use Python 3.10 or newer. From the repository folder:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-webcam.txt
+python scripts/webcam_people.py
+```
+
+A window shows your webcam with **person** boxes, confidence scores and the number
+of people visible. Allow camera access for Terminal or your IDE when prompted.
+Press **Q**, **Esc**, or close the window to stop. The first run downloads the
+small pretrained `yolo11n.pt` model; subsequent inference runs locally. It does not
+record or upload video. “Person” is a category label, not identification by name.
+
+On Windows, activate with `.venv\Scripts\activate` instead. If the wrong camera
+opens, use `python scripts/webcam_people.py --camera 1`. Close FaceTime/Zoom or
+other apps using the camera if it cannot open. On macOS, check System Settings →
+Privacy & Security → Camera for the app running Python.
+
+The default runs on CPU. On Apple Silicon, try `--device mps` for acceleration;
+use `--device cpu` if that backend fails. Adjust the detection threshold with
+`--confidence 0.7`. No stereo cameras, Jetson, or ROS are needed for this mode.
+See [Ultralytics prediction documentation](https://docs.ultralytics.com/modes/predict/)
+for the underlying detector API.
+
 ## Included
 
 - Stereo rectification, disparity and point-cloud launch configuration.
