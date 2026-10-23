@@ -14,6 +14,42 @@ starter; autonomous driving is not yet implemented or validated.
 - Unit tests and GitHub Actions checks, including a Humble package build.
 - Hardware integration contracts, Nav2 configuration guidance and demo milestones.
 
+## Live camera detections on your screen
+
+The immediate demo is a live camera image with boxes, object names and confidence
+scores. Run on the Jetson with a connected display, or on a ROS-connected Ubuntu
+computer with a graphical desktop. Camera capture must already be publishing ROS
+images; this launch does not configure the physical cameras.
+
+After building and sourcing the workspace, with Ultralytics and compatible
+PyTorch installed and a local model available:
+
+```bash
+ros2 launch dubdash detection_view.launch.py \
+  model:=/absolute/path/to/model.pt \
+  image:=/stereo/left/image_raw camera:=left
+```
+
+This opens an image viewer showing detections for every class supported by the
+model. Set `detect_all:=false` for people only, or `confidence:=0.7` to raise the
+threshold. The annotated stream is `/left/image_annotated` and structured boxes
+are `/left/detections`. Frames without detections still appear as live images.
+If the viewer starts blank, select `/left/image_annotated` from its topic list.
+
+For the right camera, run a second launch in another terminal:
+
+```bash
+ros2 launch dubdash detection_view.launch.py \
+  model:=/absolute/path/to/model.pt \
+  image:=/stereo/right/image_raw camera:=right
+```
+
+Each camera has its own window and detector. Running two models increases GPU
+load; benchmark one stream first. Use bgr8/rgb8/mono images, or a debayered driver
+output. This display shows 2D recognition; it does not measure distance or drive
+the robot. A remote screen requires working ROS networking and matching domain
+IDs. No browser dashboard is included.
+
 ## Build on the Jetson
 
 Install ROS 2 Humble using its official Ubuntu deb instructions first. Then,

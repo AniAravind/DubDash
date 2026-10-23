@@ -18,3 +18,5 @@ calibration/*
 !calibration/.gitkeep
 
 .DS_Store
+
+.cache/
