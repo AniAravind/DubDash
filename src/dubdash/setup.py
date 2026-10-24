@@ -7,7 +7,6 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/dubdash"]),
         ("share/dubdash", ["package.xml"]),
         ("share/dubdash/launch", glob("launch/*.launch.py")),
-        ("share/dubdash/config", glob("config/*.yaml")),
     ],
     install_requires=["setuptools"], zip_safe=True,
     maintainer="DubDash maintainers", maintainer_email="maintainers@example.com",

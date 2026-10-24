@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>dubdash_replay</name><version>0.1.0</version>
+  <description>Recorded stereo mapping and visualization for development.</description>
+  <maintainer email="maintainers@example.com">DubDash maintainers</maintainer>
+  <license>UNLICENSED</license>
+  <exec_depend>launch_ros</exec_depend><exec_depend>ament_index_python</exec_depend>
+  <exec_depend>rclcpp_components</exec_depend>
+  <exec_depend>image_proc</exec_depend><exec_depend>image_transport</exec_depend>
+  <exec_depend>compressed_image_transport</exec_depend>
+  <exec_depend>rosbag2_transport</exec_depend>
+  <exec_depend>rosbag2_storage_default_plugins</exec_depend>
+  <exec_depend>rtabmap_launch</exec_depend><exec_depend>rviz2</exec_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

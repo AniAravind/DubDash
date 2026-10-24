@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_menu xmlns="http://openbox.org/3.4/menu">
+  <menu id="root-menu" label="DubDash">
+    <item label="Open ROS terminal"><action name="Execute"><command>xterm -fa 'DejaVu Sans Mono' -fs 12 -e bash -i</command></action></item>
+    <item label="Show demo instructions"><action name="Execute"><command>/usr/local/bin/dubdash-terminal</command></action></item>
+  </menu>
+</openbox_menu>

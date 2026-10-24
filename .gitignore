@@ -24,3 +24,5 @@ calibration/*
 DerivedData/
 xcuserdata/
 *.xcuserstate
+
+data/

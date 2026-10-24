@@ -1,0 +1,2 @@
+# Tests for the robot policy and recorded mapping tools; no ROS required.
+pytest==8.3.5

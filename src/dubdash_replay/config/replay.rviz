@@ -1,0 +1,73 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Fixed Frame: map
+    Background Color: 30; 32; 36
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Metre grid
+      Enabled: true
+      Plane Cell Count: 50
+      Cell Size: 1
+    - Class: rviz_default_plugins/Map
+      Name: Stereo occupancy (unknown is not clear)
+      Enabled: true
+      Topic:
+        Value: /rtabmap/map
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+      Alpha: 0.7
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Reconstructed scene
+      Enabled: true
+      Topic:
+        Value: /rtabmap/cloud_map
+        Reliability Policy: Reliable
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: RGB8
+    - Class: rviz_default_plugins/Path
+      Name: Optimized recorded trajectory (not planned route)
+      Enabled: true
+      Topic:
+        Value: /rtabmap/mapPath
+      Color: 70; 220; 140
+      Line Style: Lines
+      Line Width: 0.05
+    - Class: rviz_default_plugins/Path
+      Name: Graph route to selected node (not obstacle avoidance)
+      Enabled: true
+      Topic:
+        Value: /rtabmap/global_path
+      Color: 255; 200; 50
+      Line Style: Lines
+      Line Width: 0.08
+    - Class: rviz_default_plugins/Odometry
+      Name: Stereo visual odometry
+      Enabled: true
+      Topic:
+        Value: /vo
+      Keep: 25
+    - Class: rviz_default_plugins/PoseWithCovariance
+      Name: Localized position
+      Enabled: true
+      Topic:
+        Value: /rtabmap/localization_pose
+    - Class: rviz_default_plugins/TF
+      Name: Coordinate frames
+      Enabled: false
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 18
+      Pitch: 1.2
+      Yaw: 0.5
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+Window Geometry:
+  Width: 1280
+  Height: 800
