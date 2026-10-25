@@ -6,6 +6,8 @@ services:
     image: dubdash-mapping:humble
     # Native ARM64 on M-series Macs; no Intel emulation.
     platform: linux/arm64
+    runtime: nvidia
+    gpus: all
     ports:
       - "127.0.0.1:6080:6080"
     shm_size: "1gb"

@@ -43,9 +43,27 @@ def configure(context):
     )
     config = Path(get_package_share_directory('dubdash_replay')) / 'config/replay.rviz'
     source = Path(get_package_share_directory('rtabmap_launch')) / 'launch/rtabmap.launch.py'
+    pipeline = LaunchConfiguration('pipeline').perform(context)
+    if pipeline == 'decode':
+        return [republishers[0]]
+    if pipeline == 'vo':
+        odometry = Node(
+            package='rtabmap_odom', executable='stereo_odometry', name='stereo_odometry',
+            namespace='rtabmap', output='screen',
+            parameters=[{'use_sim_time': True, 'frame_id': 'base_footprint',
+                         'odom_frame_id': 'odom', 'approx_sync': False,
+                         'subscribe_stereo': True, 'qos': 0,
+                         'wait_for_transform': 0.2, 'publish_tf': True}],
+            remappings=[('left/image_rect', '/stereo_camera/left/image_rect'),
+                        ('right/image_rect', '/stereo_camera/right/image_rect'),
+                        ('left/camera_info', '/stereo_camera/left/camera_info_throttle'),
+                        ('right/camera_info', '/stereo_camera/right/camera_info_throttle'),
+                        ('odom', '/vo')])
+        return [*republishers, container, odometry]
+    slam_arguments = stereo_launch_arguments(database, mode, config, gui)
     slam = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(str(source)),
-        launch_arguments=stereo_launch_arguments(database, mode, config, gui).items(),
+        launch_arguments=slam_arguments.items(),
     )
     return [*republishers, container, slam]
 
@@ -53,6 +71,7 @@ def configure(context):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('database_path', description='New .db for mapping; existing map for localization'),
+        DeclareLaunchArgument('pipeline', default_value='slam', choices=['decode', 'vo', 'slam']),
         DeclareLaunchArgument('mode', default_value='mapping', choices=['mapping', 'localization']),
         DeclareLaunchArgument('gui', default_value='true', choices=['true', 'false']),
         OpaqueFunction(function=configure),

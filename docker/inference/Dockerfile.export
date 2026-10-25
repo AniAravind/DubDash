@@ -1,0 +1,10 @@
+# Optional CPU-only export environment; unnecessary if a suitable ONNX exists.
+# No GPU PyTorch build is needed by the inference worker.
+FROM python:3.12-slim
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+ARG ULTRALYTICS_VERSION=8.3.253
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir ultralytics==${ULTRALYTICS_VERSION} onnx==1.17.0
+WORKDIR /models
+ENV YOLO_CONFIG_DIR=/tmp/ultralytics

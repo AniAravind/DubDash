@@ -8,7 +8,8 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument("model", description="Absolute path to local YOLO weights/engine"),
+        DeclareLaunchArgument("model", default_value="", description="Absolute path to local YOLO weights/engine"),
+        DeclareLaunchArgument("endpoint", default_value="", description="Optional local HTTP inference worker"),
         DeclareLaunchArgument("image", default_value="/stereo/left/image_raw"),
         DeclareLaunchArgument("camera", default_value="left",
                               description="Unique ROS namespace for this camera"),
@@ -18,6 +19,7 @@ def generate_launch_description():
              namespace=LaunchConfiguration("camera"), output="screen",
              parameters=[{
                  "model": LaunchConfiguration("model"),
+                 "endpoint": LaunchConfiguration("endpoint"),
                  "confidence": ParameterValue(LaunchConfiguration("confidence"), value_type=float),
                  "detect_all": ParameterValue(LaunchConfiguration("detect_all"), value_type=bool),
              }], remappings=[("image", LaunchConfiguration("image")),

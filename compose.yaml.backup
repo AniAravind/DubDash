@@ -1,0 +1,21 @@
+services:
+  mapping:
+    build:
+      context: .
+      dockerfile: docker/mapping/Dockerfile
+    image: dubdash-mapping:humble
+    # Native ARM64 on M-series Macs; no Intel emulation.
+    platform: linux/arm64
+    ports:
+      - "127.0.0.1:6080:6080"
+    shm_size: "1gb"
+    environment:
+      ROS_DOMAIN_ID: "42"
+      ROS_LOCALHOST_ONLY: "1"
+    volumes:
+      - mapping-data:/workspace/data
+      - mapping-maps:/workspace/maps
+    stop_grace_period: 45s
+volumes:
+  mapping-data:
+  mapping-maps:

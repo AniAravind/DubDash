@@ -1,0 +1,21 @@
+# Opt-in overlay. Existing mapping image, ports and persistent volumes are retained.
+services:
+  mapping:
+    volumes:
+      - ./src:/benchmark-src:ro
+      - ./scripts:/benchmark-scripts:ro
+      - ./benchmark-runs:/benchmark-runs
+  inference:
+    build:
+      context: .
+      dockerfile: docker/inference/Dockerfile
+    image: dubdash-inference:jp721
+    platform: linux/arm64
+    runtime: nvidia
+    gpus: all
+    # Loopback is shared with mapping; no additional host ports or host networking.
+    network_mode: service:mapping
+    command: [--engine, /models/yolov8n-640-fp16.engine, --port, '8090']
+    volumes:
+      - ./models:/models:ro
+      - ./benchmark-runs:/benchmark-runs
