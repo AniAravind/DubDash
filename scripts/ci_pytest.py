@@ -20,7 +20,9 @@ def main(argv=None):
             for case in ET.parse(report).iter('testcase'):
                 for failure in [*case.findall('failure'), *case.findall('error')]:
                     title = escape(case.get('classname', '')+'.'+case.get('name', '')).replace(',', '%2C').replace(':', '%3A')
-                    detail = escape((failure.text or failure.get('message', 'Test failed'))[-20000:])
+                    # GitHub truncates annotations to 4096 characters. Keep the
+                    # assertion tail, rather than losing it after a long fixture.
+                    detail = escape((failure.text or failure.get('message', 'Test failed'))[-3000:])
                     print(f'::error title={title}::{detail}', flush=True)
         return result.returncode
 
