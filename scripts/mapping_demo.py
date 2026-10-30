@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Fetch, inspect and replay the RTAB-Map outdoor stereo mapping demo."""
 import argparse
+from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shlex
 import shutil
 import sqlite3
@@ -37,9 +38,14 @@ def extract_bag(archive, destination, name):
             if sum(item.file_size for item in source.infolist()) > MAX_EXTRACTED:
                 raise ValueError('Archive expands beyond the demo size limit')
             for item in source.infolist():
-                relative = Path(item.filename)
+                # ZIP paths are POSIX paths on every OS. Reject Windows drives,
+                # separators and NTFS alternate streams before joining paths.
+                raw_name = item.orig_filename  # Before zipfile's OS-specific normalization.
+                if '\\' in raw_name or ':' in raw_name:
+                    raise ValueError('Unsafe archive path/link')
+                relative = PurePosixPath(raw_name)
                 if (relative.is_absolute() or '..' in relative.parts
-                        or '\\' in item.filename or stat.S_ISLNK(item.external_attr >> 16)):
+                        or stat.S_ISLNK(item.external_attr >> 16)):
                     raise ValueError('Unsafe archive path/link')
                 if item.is_dir() or '__MACOSX' in relative.parts:
                     continue
@@ -99,7 +105,7 @@ def snapshot_map(source, target):
     with target.open('xb'):
         pass
     try:
-        with readonly_database(source) as incoming, sqlite3.connect(target) as outgoing:
+        with closing(readonly_database(source)) as incoming, closing(sqlite3.connect(target)) as outgoing:
             incoming.backup(outgoing)
     except Exception:
         target.unlink(missing_ok=True)

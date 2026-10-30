@@ -17,8 +17,18 @@ class PersonDetector(Node):
     def __init__(self):
         super().__init__('person_detector')
         self.endpoint = self.declare_parameter('endpoint', '').value
+        from dubdash.inference_http import HttpInference
+        url = self.declare_parameter('inference_url', '').value
+        timeout = self.declare_parameter('inference_timeout', 1.0).value
+        allow_mock = self.declare_parameter('allow_mock_inference', False).value
+        self.allow_mock = allow_mock
+        if url and self.endpoint:
+            raise ValueError('Choose either endpoint or inference_url')
+        self.remote = HttpInference(url, timeout, allow_mock) if url else None
+        if allow_mock:
+            self.get_logger().warning('Mock inference permitted: development use only')
         self.model = None
-        if not self.endpoint:
+        if not self.endpoint and self.remote is None:
             from ultralytics import YOLO
             model = self.declare_parameter('model', '').value
             if not model or not Path(model).is_file():
@@ -44,6 +54,17 @@ class PersonDetector(Node):
         self.create_subscription(Image, 'image', self.detect, camera_qos)
 
     def predict(self, frame):
+        if getattr(self, 'remote', None) is not None:
+            started = time.perf_counter()
+            predictions = self.remote.predict(frame.shape[1], frame.shape[0],
+                                               frame.tobytes(), self.confidence)
+            boxes = []
+            for item in predictions:
+                x, y, w, h = item['xywh']
+                boxes.append(dict(label=item['label'], score=item['score'],
+                                  xyxy=[x-w/2, y-h/2, x+w/2, y+h/2]))
+            # This development protocol has no GPU timing measurement.
+            return boxes, None, (time.perf_counter()-started)*1000
         if self.endpoint:
             import cv2
             ok, jpeg = cv2.imencode('.jpg', frame)
@@ -52,6 +73,8 @@ class PersonDetector(Node):
             with urlopen(Request(self.endpoint, data=jpeg.tobytes(),
                                  headers={'Content-Type': 'image/jpeg', 'X-Confidence': str(self.confidence)}), timeout=30) as response:
                 result = json.load(response)
+            if result.get('backend') == 'mock' and not getattr(self, 'allow_mock', False):
+                raise ValueError('Mock inference requires explicit opt-in')
             return result['boxes'], result['inference_ms'], result['worker_ms']
         import torch
         gpu = str(self.device) != 'cpu'

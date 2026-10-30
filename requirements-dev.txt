@@ -1,2 +1,4 @@
-# Tests for the robot policy and recorded mapping tools; no ROS required.
+# Native policy, replay, HTTP and TensorRT decoder tests; no ROS/GPU required.
 pytest==8.3.5
+numpy==2.2.6; python_version < '3.14'
+numpy==2.3.5; python_version >= '3.14'

@@ -1,25 +1,92 @@
 name: Checks
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      arm64:
+        description: Also build the existing Humble image for ARM64 using QEMU
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  policy:
-    runs-on: ubuntu-22.04
+  python:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: pip
       - run: python -m pip install -r requirements-dev.txt
-      - run: python -m compileall -q src scripts
+      - run: python -m compileall -q src scripts tests
       - run: python -m pytest -q
-  ros-build:
+
+  compose:
     runs-on: ubuntu-22.04
-    container: ros:humble-ros-base
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - run: apt-get update && rosdep update && rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
-      - shell: bash
+      - uses: docker/setup-buildx-action@v3
+      - name: Validate base and merged laptop configurations
         run: |
-          source /opt/ros/humble/setup.bash
-          colcon build --symlink-install
-          source install/setup.bash
-          ros2 launch dubdash_replay replay_mapping.launch.py --show-args
+          bash -n scripts/test_laptop.sh scripts/run_container_tests.sh
+          bash scripts/test_laptop.sh config
+          docker compose -f compose.yaml -f compose.benchmark.yaml config --quiet
+          docker compose -f compose.yaml -f compose.laptop.yaml config --format json | python3 scripts/check_laptop_compose.py
+
+  ros-integration:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    needs: compose
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/mapping/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: dubdash-laptop:humble
+          cache-from: type=gha,scope=humble-amd64
+          cache-to: type=gha,mode=max,scope=humble-amd64
+      - name: Run unit and required ROS integration tests with mock service
+        run: bash scripts/test_laptop.sh
+        env:
+          # Buildx already copied the checkout and ran colcon; don't build twice.
+          LAPTOP_SKIP_BUILD: '1'
+          LAPTOP_PLATFORM: linux/amd64
+
+  arm64-build:
+    # Slower pre-merge check, not part of everyday laptop runs/pushes.
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.arm64)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    needs: compose
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/mapping/Dockerfile
+          platforms: linux/arm64
+          push: false
+          cache-from: type=gha,scope=humble-arm64
+          cache-to: type=gha,mode=max,scope=humble-arm64

@@ -1,0 +1,51 @@
+# Explicit opt-in only: docker compose -f compose.yaml -f compose.laptop.yaml ...
+# Requires Docker Compose >= 2.30 (gpus and !reset). Never deploy on the robot.
+services:
+  mapping:
+    image: ${LAPTOP_TEST_IMAGE:-dubdash-laptop:humble}
+    platform: ${LAPTOP_PLATFORM:-linux/amd64}
+    runtime: runc
+    gpus: !reset null
+    devices: !reset []
+    deploy:
+      resources:
+        reservations:
+          devices: !reset []
+    ports: !reset []
+    volumes: !reset []
+    healthcheck:
+      disable: true
+    environment:
+      NVIDIA_VISIBLE_DEVICES: void
+      NVIDIA_DRIVER_CAPABILITIES: ""
+      CUDA_VISIBLE_DEVICES: ""
+      DUBDASH_REQUIRE_ROS: "1"
+      INFERENCE_URL: http://mock-inference:8000
+      PYTHONPATH: /workspace/scripts
+      ROS_DOMAIN_ID: "91"
+      ROS_LOCALHOST_ONLY: "1"
+    entrypoint: ["/bin/bash", "/workspace/scripts/run_container_tests.sh"]
+    command: []
+    depends_on:
+      mock-inference:
+        condition: service_healthy
+
+  mock-inference:
+    image: ${LAPTOP_TEST_IMAGE:-dubdash-laptop:humble}
+    platform: ${LAPTOP_PLATFORM:-linux/amd64}
+    runtime: runc
+    init: true
+    environment:
+      NVIDIA_VISIBLE_DEVICES: void
+      CUDA_VISIBLE_DEVICES: ""
+      PYTHONPATH: /workspace/src/dubdash
+    entrypoint: ["python3", "/workspace/scripts/mock_inference_worker.py"]
+    command: ["--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+# The base file's saved recording/map volumes are unused by these services.
+volumes: !reset {}

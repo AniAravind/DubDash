@@ -12,11 +12,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
-COPY src/ src/
 # rosdep is initialized in the ROS base image. Resolve only this workspace's needs.
+# Cache dependency resolution separately from everyday Python/source changes.
+COPY src/dubdash/package.xml /tmp/dubdash-manifests/dubdash/package.xml
+COPY src/dubdash_replay/package.xml /tmp/dubdash-manifests/dubdash_replay/package.xml
 RUN apt-get update && rosdep update --rosdistro humble \
-    && rosdep install --from-paths src --ignore-src -r -y --rosdistro humble \
+    && rosdep install --from-paths /tmp/dubdash-manifests --ignore-src -r -y --rosdistro humble \
     && rm -rf /var/lib/apt/lists/*
+COPY src/ src/
 COPY scripts/ scripts/
 COPY tests/ tests/
 COPY pytest.ini README.md ./

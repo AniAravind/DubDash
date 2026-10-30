@@ -1,5 +1,6 @@
 """Recorded-stereo demo contracts and validation (no ROS imports)."""
 import math
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 
@@ -43,7 +44,7 @@ def inspect_bag(path):
     topics = {}
     total = 0
     for segment in segments:
-        with readonly_database(segment) as connection:
+        with closing(readonly_database(segment)) as connection:
             topics.update(connection.execute('SELECT name, type FROM topics').fetchall())
             total += connection.execute('SELECT count(*) FROM messages').fetchone()[0]
     missing = [name for name, kind in SENSOR_TOPICS.items() if topics.get(name) != kind]
@@ -69,7 +70,7 @@ def validate_database(path, mode):
         if not path.is_file():
             raise ValueError(f'No saved map: {path}. Run mapping first.')
         try:
-            with readonly_database(path) as connection:
+            with closing(readonly_database(path)) as connection:
                 count = connection.execute('SELECT count(*) FROM Node').fetchone()[0]
         except sqlite3.Error as error:
             raise ValueError(f'Not a readable RTAB-Map map: {path}') from error

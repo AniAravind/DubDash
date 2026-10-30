@@ -99,11 +99,16 @@ def test_safe_archive_and_existing_destination(tmp_path):
         extract_bag(archive, target, 'bag')
 
 
-@pytest.mark.parametrize('name', ['../escape.db3', '/outside.db3', 'folder\\escape.db3'])
+@pytest.mark.parametrize('name', ['../escape.db3', '/outside.db3', 'folder\\escape.db3',
+                                  'C:/escape.db3', 'bag/file:stream.db3'])
 def test_archive_traversal_rejected(tmp_path, name):
     archive = tmp_path / 'unsafe.zip'
     with zipfile.ZipFile(archive, 'w') as output:
-        output.writestr(name, 'bad')
+        entry = zipfile.ZipInfo(name)
+        # Preserve a deliberately unsafe raw name even on Windows, where
+        # ZipInfo normally converts backslashes into forward slashes.
+        entry.filename = name
+        output.writestr(entry, 'bad')
     with pytest.raises(ValueError, match='Unsafe'):
         extract_bag(archive, tmp_path / 'target', 'bag')
     assert not (tmp_path / 'target').exists()

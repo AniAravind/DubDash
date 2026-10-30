@@ -24,7 +24,9 @@ def test_scenarios_use_new_database_and_sensor_only_playback(tmp_path):
     for scenario, (pipeline, detect) in SCENARIOS.items():
         jobs, play = commands(scenario, '/bag', tmp_path/'run', .5, 'http://127.0.0.1:8090/')
         assert f'pipeline:={pipeline}' in jobs[0]
-        assert f'database_path:={tmp_path}/run/map.db' in jobs[0]
+        database = next(arg.split(':=', 1)[1] for arg in jobs[0]
+                        if arg.startswith('database_path:='))
+        assert Path(database) == tmp_path / 'run' / 'map.db'
         assert len(jobs) == 1+int(detect)
         assert '--start-paused' not in play
         assert '/cmd_vel' not in play

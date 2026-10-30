@@ -1,9 +1,26 @@
 # DubDash
 
 Software foundation for a supervised delivery robot on NVIDIA Jetson Orin Nano.
-Target: **JetPack 6 / Ubuntu 22.04 / ROS 2 Humble / Python 3.10**. Confirm the
-installed JetPack before installing ROS. Autonomous driving is not implemented
-or validated yet.
+Team-reported device: **ARM64 / Ubuntu 24.04 / JetPack 7.2.1 / CUDA 13.2 /
+TensorRT 10.16.2**, with **ROS 2 Humble inside Docker**. The existing Humble
+development image uses **Ubuntu 22.04 / Python 3.10** inside the container.
+NVIDIA runtime compatibility still requires device validation. Autonomous driving
+is not implemented or validated yet.
+
+## Laptop development and CI
+
+On Windows (Git Bash/WSL2), macOS or Linux with Docker running:
+
+```bash
+bash scripts/test_laptop.sh
+```
+
+This runs CPU-only unit and ROS integration tests with generated camera replay
+and a mock HTTP inference worker, using the laptop's native architecture.
+The existing `compose.yaml` is unchanged; the script explicitly selects
+`compose.laptop.yaml`. Run `bash scripts/test_laptop.sh arm64-build` for the slower
+Buildx/QEMU pre-merge build. See [laptop testing](docs/laptop-testing.md) for setup,
+CI coverage, the mock contract and checks that still require Jetson hardware.
 
 ## Robot software
 
@@ -22,8 +39,10 @@ navigation stack. Those depend on the physical robot. See
 
 ## Build on the Jetson
 
-Install [ROS 2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
-on the compatible Ubuntu system, then from the repository root:
+Run these commands **inside an Ubuntu 22.04 / ROS 2 Humble container**, not directly
+on the Ubuntu 24.04 Jetson host. For a separate native Ubuntu 22.04 system, first
+install [ROS 2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html).
+From the repository root in that environment:
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -106,8 +125,8 @@ avoidance or a motor-control command.
 
 ## Development and checks
 
-The remaining policy and replay tests need Python and pytest, not ROS, OpenCV,
-PyTorch, WebSockets or Xcode:
+The native policy, replay, HTTP and benchmark tests need Python, pytest and NumPy. ROS integration
+is skipped outside ROS and required by the laptop Docker workflow:
 
 ```bash
 python3 -m pip install -r requirements-dev.txt
@@ -115,8 +134,9 @@ python3 -m pytest -q
 python3 -m compileall -q src scripts
 ```
 
-CI also builds both ROS packages and checks the replay launch arguments on Humble.
-The mapping Docker image runs the policy/replay tests against its ROS environment.
+CI runs native tests on all three laptop operating systems, validates Compose,
+builds both ROS packages and runs CPU ROS integration. Pull requests also build
+the existing Humble image for ARM64 using Buildx/QEMU.
 See [the hardware milestones](docs/milestones.md) for the remaining integration work.
 
 The iPhone capture app, laptop webcam demo, face-only fallback, monocular distance
