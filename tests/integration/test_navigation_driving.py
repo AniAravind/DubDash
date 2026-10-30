@@ -131,6 +131,10 @@ def test_named_route_turns_arrives_cancels_and_stops_on_faults(ros, processes, t
 
     wait(lambda: readiness.get('system') and readiness.get('perception') and status and status[-1].get('ready'), tick, timeout=40)
     def send(request_id, operation='start', route=None):
+        if operation == 'start':
+            # Readiness is owned by the manager. Observing a recovered sensor on
+            # this probe does not mean its update has reached that other node.
+            wait(lambda: status and status[-1].get('ready'), tick)
         payload = json.dumps(dict(request_id=request_id, operation=operation, route=route or []))
         def step():
             tick()

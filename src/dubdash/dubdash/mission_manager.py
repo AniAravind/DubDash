@@ -17,6 +17,8 @@ from dubdash.missions import destinations, command, MissionLedger
 
 
 class MissionManager(Node):
+    NAV2_NODES = ('controller_server', 'planner_server', 'smoother_server',
+                  'behavior_server', 'bt_navigator', 'velocity_smoother', 'collision_monitor')
     def __init__(self):
         super().__init__('mission_manager')
         catalog = self.declare_parameter('destinations', '').value
@@ -26,8 +28,12 @@ class MissionManager(Node):
         if not math.isfinite(self.max_duration) or self.max_duration <= 0:
             raise ValueError('leg_timeout must be finite and positive')
         self.client = ActionClient(self, NavigateToPose, '/navigate_to_pose')
-        self.lifecycle = self.create_client(GetState, '/bt_navigator/get_state')
-        self.nav2_active, self.nav2_stamp, self.state_request = False, -math.inf, None
+        self.lifecycle = {name: self.create_client(GetState, f'/{name}/get_state') for name in self.NAV2_NODES}
+        self.states, self.state_requests = {}, {}
+        self.nav2_active, self.ready_since = False, None
+        self.settle = self.declare_parameter('readiness_settle', 1.0).value
+        if not math.isfinite(self.settle) or self.settle < 1.0:
+            raise ValueError('readiness_settle must be finite and at least one second')
         self.next_check = 0.
         self.publisher = self.create_publisher(String, '/missions/status',
             QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
@@ -47,10 +53,16 @@ class MissionManager(Node):
 
     def health(self, name, msg):
         self.inputs[name] = (msg.data, time.monotonic())
+        if not msg.data:
+            self.ready_since = None
 
     def ready(self):
         now = time.monotonic()
-        return self.nav2_active and 0 <= now-self.nav2_stamp <= 2. and all(self.inputs.get(name, (False, -math.inf))[0]
+        return (self.inputs_ready(now) and self.ready_since is not None
+                and now-self.ready_since >= self.settle)
+
+    def inputs_ready(self, now):
+        return self.nav2_active and all(self.inputs.get(name, (False, -math.inf))[0]
             and 0 <= now-self.inputs[name][1] <= .25 for name in ('system', 'perception'))
 
     def snapshot(self):
@@ -175,10 +187,19 @@ class MissionManager(Node):
 
     def tick(self):
         now = time.monotonic()
-        if now >= self.next_check and self.state_request is None and self.lifecycle.service_is_ready():
+        if now >= self.next_check:
             self.next_check = now+.5
-            self.state_request = self.lifecycle.call_async(GetState.Request())
-            self.state_request.add_done_callback(self.navigation_state)
+            for name, client in self.lifecycle.items():
+                if name not in self.state_requests and client.service_is_ready():
+                    future = client.call_async(GetState.Request())
+                    self.state_requests[name] = future
+                    future.add_done_callback(lambda future, key=name: self.navigation_state(key, future))
+        self.nav2_active = all(self.states.get(name, (False, -math.inf))[0]
+            and 0 <= now-self.states[name][1] <= 2. for name in self.NAV2_NODES)
+        if not self.inputs_ready(now):
+            self.ready_since = None
+        elif self.ready_since is None:
+            self.ready_since = now
         active = self.state in ('dispatching', 'running')
         if active and (not self.ready() or time.monotonic() > self.deadline):
             self.stop('Health lost or leg timeout; explicit new start required')
@@ -187,13 +208,12 @@ class MissionManager(Node):
         self.permit.publish(Bool(data=self.state == 'running' and self.ready()))
         self.publish()
 
-    def navigation_state(self, future):
-        self.state_request = None
+    def navigation_state(self, name, future):
+        self.state_requests.pop(name, None)
         try:
-            self.nav2_active = future.result().current_state.id == State.PRIMARY_STATE_ACTIVE
-            self.nav2_stamp = time.monotonic()
+            self.states[name] = (future.result().current_state.id == State.PRIMARY_STATE_ACTIVE, time.monotonic())
         except Exception:
-            self.nav2_active = False
+            self.states[name] = (False, time.monotonic())
 
     def destroy_node(self):
         if rclpy.ok():

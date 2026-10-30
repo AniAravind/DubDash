@@ -63,7 +63,10 @@ An ID cannot be reused for a different command. Rejected requests are also store
 once conditions improve, use a new ID for a new start.
 
 States include idle, dispatching, running, succeeded, canceling, canceled, failed
-and fault. Goals run serially through Nav2's NavigateToPose action. A stop, battery
+and fault. Readiness requires all seven navigation lifecycle nodes (including
+Collision Monitor) active, plus healthy inputs stable for at least one second.
+Read the manager's `ready` field; a sensor update observed by an operator may not
+have reached the manager yet. Goals run serially through Nav2's NavigateToPose action. A stop, battery
 failure, perception-health loss or leg timeout cancels the active goal, revokes
 permission and requires an explicit new start after recovery. No mission resumes
 automatically after process restart. Default timeout is 300 seconds per leg;
