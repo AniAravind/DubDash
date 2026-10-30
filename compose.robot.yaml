@@ -14,5 +14,6 @@ services:
     volumes:
       - ${ROBOT_CONFIG:?Set ROBOT_CONFIG to measured profile}:/config/robot.yaml:ro
       - ${ROBOT_MAPS:?Set ROBOT_MAPS to robot map directory}:/maps
-    command: ["ros2", "launch", "dubdash", "robot.launch.py", "robot_config:=/config/robot.yaml", "database:=/maps/route.db", "enable_motion:=false"]
+      - ${ROBOT_DESTINATIONS:?Set ROBOT_DESTINATIONS to named destination JSON}:/config/destinations.json:ro
+    command: ["ros2", "launch", "dubdash", "robot.launch.py", "robot_config:=/config/robot.yaml", "database:=/maps/route.db", "destinations:=/config/destinations.json", "enable_motion:=false"]
     stop_grace_period: 30s

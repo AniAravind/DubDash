@@ -10,6 +10,13 @@ until measured geometry and required health inputs are supplied.
 
 ## Robot navigation (Orin Nano)
 
+[Named delivery missions](docs/delivery-missions.md) add pickup/dropoff/home goals,
+persistent request IDs, cancellation and live status. The command guard now also
+requires battery/physical-stop health and an active mission. Configure the measured
+battery threshold and destination catalog before starting the robot runtime.
+An opt-in, flat-floor stereo ground-support prototype is available; it requires
+full measured coverage and does not qualify outdoor terrain or unseen ground.
+
 See [robot navigation setup](docs/robot-navigation.md) for the headless ARM64
 container, saved-map localization, map-coordinate goals, and forward/turn commands.
 The pipeline is RTAB-Map + live stereo obstacles → Nav2 → velocity smoother →
@@ -153,8 +160,8 @@ python3 -m compileall -q src scripts
 ```
 
 CI runs native tests on all three laptop operating systems, validates Compose,
-builds both ROS packages and runs CPU ROS integration. Pull requests also build
-the existing Humble image for ARM64 using Buildx/QEMU.
+and runs full CPU ROS integration on AMD64 and native ARM64 on every push/PR.
+Both architectures also build the headless robot image.
 See [the hardware milestones](docs/milestones.md) for the remaining integration work.
 
 The iPhone capture app, laptop webcam demo, face-only fallback, monocular distance

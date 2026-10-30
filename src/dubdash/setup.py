@@ -16,5 +16,9 @@ setup(
         "command_guard = dubdash.command_guard:main",
         "person_detector = dubdash.person_detector:main",
         "navigation_supervisor = dubdash.navigation_supervisor:main",
+        "system_supervisor = dubdash.system_supervisor:main",
+        "mission_manager = dubdash.mission_manager:main",
+        "mission = dubdash.mission_cli:main",
+        "ground_validator = dubdash.ground_validator:main",
     ]},
 )

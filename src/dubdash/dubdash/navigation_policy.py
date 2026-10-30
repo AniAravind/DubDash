@@ -11,6 +11,7 @@ class NavigationHealth:
         self.timeout, self.person_hold = timeout, person_hold
         self.samples = {}
         self.last_sources = {}
+        self.last_rejected = {}
         self.person_until = -math.inf
 
     def observe(self, name, source_time, ros_now, wall_now, valid=True):
@@ -22,11 +23,13 @@ class NavigationHealth:
                  and source_time > 0 and 0 <= ros_now-source_time <= limit)
         if previous is not None and source_time <= previous:
             self.samples.pop(name, None)
+            self.last_rejected[name] = 'Repeated/reversed source timestamp'
             return
         if math.isfinite(source_time):
             self.last_sources[name] = source_time
         if not valid or not fresh:
             self.samples.pop(name, None)
+            self.last_rejected[name] = f'valid={valid}, capture_age={ros_now-source_time}'
         else:
             self.samples[name] = (source_time, wall_now)
 

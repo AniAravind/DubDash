@@ -29,7 +29,9 @@ def build_config(defaults, profile):
     control['failure_tolerance'] = 0.0
     control['progress_checker'].update(required_movement_radius=.1, movement_time_allowance=10.0)
     control['FollowPath'].update(max_vel_x=linear, max_speed_xy=linear,
+                               debug_trajectory_details=False,
                                min_vel_x=0.0, max_vel_theta=angular,
+                               vx_samples=8, vy_samples=1, vtheta_samples=12,
                                trans_stopped_velocity=.02, acc_lim_x=.2,
                                decel_lim_x=-.2, acc_lim_theta=.5, decel_lim_theta=-.5)
     params('planner_server')['GridBased'].update(allow_unknown=False, use_astar=True)

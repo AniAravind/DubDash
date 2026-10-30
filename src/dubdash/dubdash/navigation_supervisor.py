@@ -139,7 +139,9 @@ class NavigationSupervisor(Node):
                             for target, source in [('map', 'base_link'), ('odom', 'base_link')])
         reasons = self.policy.reasons(now.nanoseconds/1e9, time.monotonic(), transforms_ok, self.map_ok)
         self.health.publish(Bool(data=not reasons))
-        self.status.publish(String(data=json.dumps({'healthy': not reasons, 'blocked_by': reasons})))
+        self.status.publish(String(data=json.dumps({'healthy': not reasons, 'blocked_by': reasons,
+            'last_rejected': self.policy.last_rejected,
+            'arrival_ages': {name: time.monotonic()-sample[1] for name, sample in self.policy.samples.items()}})))
 
 
 def point_cloud_2_xyz(msg):
@@ -149,11 +151,5 @@ def point_cloud_2_xyz(msg):
 
 
 def main(args=None):
-    rclpy.init(args=args)
-    node = NavigationSupervisor()
-    try:
-        rclpy.spin(node)
-    finally:
-        node.health.publish(Bool(data=False))
-        node.destroy_node()
-        rclpy.shutdown()
+    from dubdash.runtime import run
+    run(NavigationSupervisor, args, lambda node: node.health.publish(Bool(data=False)))

@@ -39,6 +39,8 @@ def configure(context):
             'confidence': .5, 'detect_all': False}],
             remappings=[('image', '/stereo/left/image_rect')]),
         include('navigation.launch.py', {'robot_config': arg('robot_config'),
+                                        'destinations': arg('destinations'),
+                                        'mission_ledger': str(source.parent/'missions.sqlite'),
                                         'enable_motion': arg('enable_motion')}),
     ]
 
@@ -48,6 +50,8 @@ def generate_launch_description():
         DeclareLaunchArgument('database', description='Saved calibrated robot RTAB-Map .db, not replay demo'),
         DeclareLaunchArgument('robot_config', description='Measured robot profile YAML'),
         DeclareLaunchArgument('inference_endpoint', default_value='http://127.0.0.1:8090'),
+        DeclareLaunchArgument('destinations', default_value=str(
+            Path(get_package_share_directory('dubdash'))/'config/destinations.example.json')),
         DeclareLaunchArgument('enable_motion', default_value='false', choices=['true', 'false']),
         OpaqueFunction(function=configure),
     ])

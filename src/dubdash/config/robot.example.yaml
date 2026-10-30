@@ -12,3 +12,14 @@ max_obstacle_height: 2.0
 # Fraction of organized stereo pixels required to contain finite 3D points.
 # This is only a coarse check; the external ground validator must check the route.
 min_depth_fraction: 0.6
+# Must be qualified for the actual battery/BMS; null deliberately blocks startup.
+battery_min_fraction: null
+ground_validation:
+  enabled: false
+  # Opt-in FLAT FLOOR prototype; measure ground_z in base_link before use.
+  ground_z: null
+  cell_size: 0.1
+  height_tolerance: 0.03
+  min_points: 3
+  max_slope: 0.1
+  horizon: 2.0

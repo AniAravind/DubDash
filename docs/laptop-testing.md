@@ -124,6 +124,20 @@ should omit it so stale source cannot accidentally pass the tests.
 
 ## What is tested
 
+The navigation additions also launch the actual Humble Nav2 planner, controller,
+velocity smoother and Collision Monitor alongside the mission manager, system
+supervisor and command guard. A synthetic unicycle integrates `/cmd_vel` and
+publishes simulated map, localization, odometry/TF and sensor inputs. This checks
+serial named stops, forward/turn commands, arrival, duplicate requests, cancel,
+low battery, active stop, missing ground input, unreachable goals and a live
+obstacle. The fixture uses an independent sensor-acquisition loop and a latched
+static map, rather than coupling sensor updates to operator polling.
+
+This exercises real navigation software, but it is not a physical dynamics,
+camera, terrain or NVIDIA test. Ground-prototype unit tests use measured-looking
+synthetic grids; the driving fixture supplies synthetic ground diagnostics and
+does not qualify the flat-floor validator on real stereo data.
+
 | Check | Native Python | Native Docker / CI | ARM64 image build |
 | --- | --- | --- | --- |
 | Existing command policy, replay contracts, archive and map handling | Yes | Yes | Yes |
@@ -196,9 +210,11 @@ without authentication or TLS; Compose exposes it only on its internal network.
    The production benchmark overlay is also checked for Compose validity.
 3. A cached AMD64 build and the same laptop test script, requiring actual ROS
    integration and the networked mock worker on every push/PR.
-4. An ARM64 Buildx/QEMU image build on pull requests. It can also be requested via
-   **Actions → Checks → Run workflow → arm64**. No image publishing or GPU runner
-   is required. See [Docker's CI example](https://docs.docker.com/build/ci/github-actions/multi-platform/).
+4. A native ARM64 runner builds the image and runs the full CPU ROS integration
+   suite on every push/PR, including the driving fixture. Both AMD64 and ARM64
+   jobs also build the headless robot userspace image. **Actions → Checks → Run
+   workflow** reruns all checks. No image publishing or GPU runner is required.
+   Local `arm64-build` remains an optional Buildx/QEMU workflow on x86 laptops.
 
 Passing these checks means CPU contracts and the tested Humble userspace paths
 work. Emulation does **not** verify GPU compatibility or performance. The base

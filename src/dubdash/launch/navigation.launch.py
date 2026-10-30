@@ -20,7 +20,10 @@ def configure(context):
         raise ValueError('Complete hardware acceptance and set hardware_verified before enabling motion')
     upstream = Path(get_package_share_directory('nav2_bringup')) / 'params/nav2_params.yaml'
     config = build_config(yaml.safe_load(upstream.read_text()), profile)
+    from dubdash.system_health import SystemHealth
+    SystemHealth(profile.get('battery_min_fraction'))
     config['bt_navigator']['ros__parameters']['default_nav_to_pose_bt_xml'] = str(share/'config/navigate.xml')
+    config['bt_navigator']['ros__parameters']['default_nav_through_poses_bt_xml'] = str(share/'config/navigate_through.xml')
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', prefix='dubdash-nav-', delete=False) as output:
         yaml.safe_dump(config, output)
         filename = output.name
@@ -44,10 +47,24 @@ def configure(context):
         Node(package='dubdash', executable='navigation_supervisor', parameters=[{
              key: profile[key] for key in ('min_obstacle_height', 'max_obstacle_height', 'min_depth_fraction')}]),
         Node(package='dubdash', executable='command_guard', parameters=[{'enabled': enabled,
-             'timeout': .25, 'max_linear': profile['max_linear'], 'max_angular': profile['max_angular']}]),
+             'timeout': .25, 'max_linear': profile['max_linear'], 'max_angular': profile['max_angular'],
+             'require_system': True, 'require_missions': True}]),
+        Node(package='dubdash', executable='system_supervisor', parameters=[{
+             'battery_min_fraction': float(profile['battery_min_fraction'])}]),
+        Node(package='dubdash', executable='mission_manager', parameters=[{
+             'destinations': LaunchConfiguration('destinations').perform(context),
+             'ledger': LaunchConfiguration('mission_ledger').perform(context)}]),
         RegisterEventHandler(OnShutdown(on_shutdown=[OpaqueFunction(
             function=lambda context: Path(filename).unlink(missing_ok=True))])),
     ]
+    ground = profile.get('ground_validation', {})
+    if ground.get('enabled', False):
+        required = ('ground_z', 'cell_size', 'height_tolerance', 'min_points', 'max_slope', 'horizon')
+        if not all(name in ground for name in required):
+            raise ValueError('Provide all measured ground-validation parameters')
+        nodes.append(Node(package='dubdash', executable='ground_validator', parameters=[{
+            **{key: ground[key] for key in required},
+            'radius': float(profile['robot_radius']), 'margin': float(profile['stop_margin'])}]))
     return nodes
 
 
@@ -55,5 +72,8 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('robot_config', description='Absolute path to measured robot YAML'),
         DeclareLaunchArgument('enable_motion', default_value='false', choices=['true', 'false']),
+        DeclareLaunchArgument('destinations', default_value=str(
+            Path(get_package_share_directory('dubdash'))/'config/destinations.example.json')),
+        DeclareLaunchArgument('mission_ledger', description='Persistent writable mission SQLite file'),
         OpaqueFunction(function=configure),
     ])

@@ -1,5 +1,10 @@
 # Orin Nano navigation integration
 
+The runtime now includes named delivery missions, battery/physical-stop checks
+and an opt-in flat-floor ground validator. Read [delivery setup](delivery-missions.md)
+alongside this guide. Only an accepted running mission grants motor permission;
+direct action goals below are diagnostic and cannot enable movement by themselves.
+
 This adds a Humble Nav2 runtime, not a validated autonomous robot. It uses the
 saved RTAB-Map occupancy map to plan a route to a map-frame goal. DWB follows
 the route by producing forward speed and yaw rate. The velocity smoother feeds
@@ -78,6 +83,7 @@ On the Jetson, in the checkout, set absolute paths to the profile and map folder
 ```bash
 export ROBOT_CONFIG=/absolute/path/to/robot.yaml
 export ROBOT_MAPS=/absolute/path/to/robot-maps
+export ROBOT_DESTINATIONS=/absolute/path/to/destinations.json
 docker compose -f compose.robot.yaml build
 docker compose -f compose.robot.yaml up
 ```
@@ -113,7 +119,8 @@ measuring actual rates, covariance and stopping behavior. Losing matches stops
 motion even when odometry continues. Clock reversal requires restarting the
 supervisor; time is never made fresh by replaying old headers.
 
-The ground validator is a **remaining hardware integration**. It must evaluate
+Ground validation remains a **hardware qualification requirement**. The optional
+flat-floor prototype is described in the delivery guide; a general validator must evaluate
 valid depth, ground support, slopes and drop-offs across the entire planned swept
 footprint, including turns, and publish a new capture-stamped diagnostic only
 when valid. A front camera may not cover that footprint; add coverage or restrict
@@ -165,7 +172,7 @@ disabled runtime stopped and restart with the measured profile for bench trials;
 do not change the guard parameter to bypass profile qualification.
 
 For an independently started localization/detector setup, use
-`ros2 launch dubdash navigation.launch.py robot_config:=/absolute/path/to/robot.yaml`.
+`ros2 launch dubdash navigation.launch.py robot_config:=/absolute/path/to/robot.yaml mission_ledger:=/absolute/path/to/missions.sqlite destinations:=/absolute/path/to/destinations.json`.
 The combined launch always starts its own visual odometry; do not run another
 mapping launch simultaneously.
 
@@ -174,9 +181,10 @@ mapping launch simultaneously.
 Native tests exercise permission-to-command stopping, stale/repeated/future
 captures, frozen clocks, person hold, unknown-space policy, configuration rejection
 and map snapshot preservation. Container tests load the new launch arguments and
-exercise the supervisor adapter. Full Nav2 planning/control, ARM64 builds, real
-stereo/localization, motor behavior and Jetson inference must be validated in ROS
-and on hardware. Software configuration is not evidence those trials passed.
+exercise the supervisor adapter. Actual Nav2 planning/control is additionally
+exercised with a synthetic base in the isolated laptop container. Real
+stereo/localization, motor behavior and Jetson inference still require hardware
+validation. Software configuration is not evidence those physical trials passed.
 
 Reference interfaces: Humble Nav2 navigation launch and defaults at
 https://github.com/ros-navigation/navigation2/tree/humble/nav2_bringup and
