@@ -1,5 +1,12 @@
 # Navigation integration plan
 
+An initial implementation now exists in `navigation.launch.py` and
+`robot.launch.py`; see [runtime setup and limitations](robot-navigation.md).
+The remaining sections describe integration requirements. The current height-band
+adapter does not replace ground-support validation. The supervisor is implemented
+but deliberately requires that external validator. Nav2 parameters are generated
+from installed Humble defaults plus a measured robot profile.
+
 ## Data and transforms
 
 Camera → stereo_image_proc → `/stereo/points2` → validated ground/obstacle filter
@@ -12,7 +19,7 @@ each transform. When adding fused wheel/visual odometry, disable RTAB-Map's odom
 transform publication and feed the fused odometry into mapping. Do not publish
 competing wheel, visual and fused transforms.
 
-## Nav2 setup still required
+## Nav2 hardware tuning still required
 
 Start with the installed Humble nav2_bringup parameter file. Measure the footprint,
 configure controller limits and stopping distance, and configure both costmaps.
@@ -32,15 +39,18 @@ Configure Collision Monitor's `cmd_vel_out_topic` as `cmd_vel_guard_input`,
 and its input to match the smoother's output. Ensure no other node publishes
 `/cmd_vel`. Configure lifecycle management and stop/slow polygons for the measured
 footprint and stopping distance using Humble parameters (some newer Nav2 examples
-use different parameter names). This repository does not start Nav2 automatically.
+use different parameter names). The opt-in robot/navigation launches start Nav2;
+other launches do not.
 
-## Health supervisor still required
+## Ground validation and health qualification still required
 
-An external supervisor must publish `/perception/healthy` (`std_msgs/Bool`) only
+The implemented supervisor publishes `/perception/healthy` (`std_msgs/Bool`) only
 while depth coverage, source timestamp age, localization, transforms and ground
 support are valid. Check source capture age, not just message arrival; rosbag
 replay can otherwise look live. A Bool heartbeat is only an integration contract,
-not proof of correct perception. No constant-true publisher is provided.
+not proof of correct perception. The external ground validator is still required;
+see the runtime guide for its stamped diagnostic contract. No constant-true
+publisher is provided.
 
 The guard requires both a command and healthy heartbeat within 250 ms, clamps
 planar commands to 0.2 m/s and 0.5 rad/s, and starts disabled. These limits are

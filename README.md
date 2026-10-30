@@ -5,7 +5,24 @@ Team-reported device: **ARM64 / Ubuntu 24.04 / JetPack 7.2.1 / CUDA 13.2 /
 TensorRT 10.16.2**, with **ROS 2 Humble inside Docker**. The existing Humble
 development image uses **Ubuntu 22.04 / Python 3.10** inside the container.
 NVIDIA runtime compatibility still requires device validation. Autonomous driving
-is not implemented or validated yet.
+is not hardware-validated. Initial Nav2 integration is available but stays disabled
+until measured geometry and required health inputs are supplied.
+
+## Robot navigation (Orin Nano)
+
+See [robot navigation setup](docs/robot-navigation.md) for the headless ARM64
+container, saved-map localization, map-coordinate goals, and forward/turn commands.
+The pipeline is RTAB-Map + live stereo obstacles → Nav2 → velocity smoother →
+Collision Monitor → command guard → `/cmd_vel`. Person detections stop permission;
+the new supervisor checks source age, depth coverage, localization and TF.
+`compose.robot.yaml` is standalone and does not change the laptop/demo overlays.
+
+The team reports IMX319 stereo cameras; board/driver and synchronization still
+need confirmation. The footprint and motor controller are unknown. A measured
+robot profile, calibrated camera/TF, external ground-support validator and motor
+adapter with an independent watchdog are still required. No placeholder dimensions
+or constant healthy publisher enable movement. The saved-map robot launch uses
+the real TensorRT JPEG endpoint and rejects mock inference by default.
 
 ## Laptop development and CI
 
@@ -32,9 +49,10 @@ CI coverage, the mock contract and checks that still require Jetson hardware.
 - A command watchdog that starts disabled and stops on stale commands or health input.
 - A ROS camera viewer for calibration/perception diagnostics.
 
-The package does not include a camera driver, motor driver, wheel odometry,
-perception health supervisor, ground/obstacle filtering or a configured Nav2
-navigation stack. Those depend on the physical robot. See
+The package does not include a camera driver, motor driver, wheel odometry or
+ground-support validator. It now includes an initial navigation supervisor,
+height-filtered stereo obstacle adapter and Nav2 configuration generator.
+These still require physical robot integration and validation. See
 [hardware interfaces](docs/hardware.md) and [navigation integration](docs/navigation.md).
 
 ## Build on the Jetson

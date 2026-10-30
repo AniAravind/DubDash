@@ -12,3 +12,5 @@ python3 -m pytest -c /dev/null -q tests
 ros2 launch dubdash stereo.launch.py --show-args
 ros2 launch dubdash mapping.launch.py --show-args
 ros2 launch dubdash_replay replay_mapping.launch.py --show-args
+ros2 launch dubdash navigation.launch.py --show-args
+ros2 launch dubdash robot.launch.py --show-args

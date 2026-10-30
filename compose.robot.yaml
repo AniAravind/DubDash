@@ -1,0 +1,18 @@
+# Standalone file for Linux ARM64 Jetson; do not merge with laptop/demo overlays.
+services:
+  robot:
+    build:
+      context: .
+      dockerfile: docker/robot/Dockerfile
+    platform: linux/arm64
+    image: dubdash-robot:humble
+    network_mode: host
+    init: true
+    environment:
+      ROS_DOMAIN_ID: "43"
+      ROS_LOCALHOST_ONLY: "1"
+    volumes:
+      - ${ROBOT_CONFIG:?Set ROBOT_CONFIG to measured profile}:/config/robot.yaml:ro
+      - ${ROBOT_MAPS:?Set ROBOT_MAPS to robot map directory}:/maps
+    command: ["ros2", "launch", "dubdash", "robot.launch.py", "robot_config:=/config/robot.yaml", "database:=/maps/route.db", "enable_motion:=false"]
+    stop_grace_period: 30s

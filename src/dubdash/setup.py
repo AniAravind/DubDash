@@ -7,6 +7,7 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/dubdash"]),
         ("share/dubdash", ["package.xml"]),
         ("share/dubdash/launch", glob("launch/*.launch.py")),
+        ("share/dubdash/config", glob("config/*")),
     ],
     install_requires=["setuptools"], zip_safe=True,
     maintainer="DubDash maintainers", maintainer_email="maintainers@example.com",
@@ -14,5 +15,6 @@ setup(
     entry_points={"console_scripts": [
         "command_guard = dubdash.command_guard:main",
         "person_detector = dubdash.person_detector:main",
+        "navigation_supervisor = dubdash.navigation_supervisor:main",
     ]},
 )

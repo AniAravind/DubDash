@@ -46,6 +46,7 @@ jobs:
           bash scripts/test_laptop.sh config
           docker compose -f compose.yaml -f compose.benchmark.yaml config --quiet
           docker compose -f compose.yaml -f compose.laptop.yaml config --format json | python3 scripts/check_laptop_compose.py
+          ROBOT_CONFIG=/tmp/robot.yaml ROBOT_MAPS=/tmp/maps docker compose -f compose.robot.yaml config --quiet
 
   ros-integration:
     runs-on: ubuntu-22.04
@@ -69,6 +70,15 @@ jobs:
           # Buildx already copied the checkout and ran colcon; don't build twice.
           LAPTOP_SKIP_BUILD: '1'
           LAPTOP_PLATFORM: linux/amd64
+      - name: Build headless robot userspace
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/robot/Dockerfile
+          platforms: linux/amd64
+          push: false
+          cache-from: type=gha,scope=robot-amd64
+          cache-to: type=gha,mode=max,scope=robot-amd64
 
   arm64-build:
     # Slower pre-merge check, not part of everyday laptop runs/pushes.
@@ -90,3 +100,12 @@ jobs:
           push: false
           cache-from: type=gha,scope=humble-arm64
           cache-to: type=gha,mode=max,scope=humble-arm64
+      - name: Build headless robot ARM64 userspace
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/robot/Dockerfile
+          platforms: linux/arm64
+          push: false
+          cache-from: type=gha,scope=robot-arm64
+          cache-to: type=gha,mode=max,scope=robot-arm64

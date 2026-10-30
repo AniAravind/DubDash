@@ -31,6 +31,76 @@ from vision_msgs.msg import Detection2DArray
 from dubdash.command_guard import GuardNode
 
 
+def test_navigation_cloud_adapter_and_person_stop(ros):
+    from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
+    from geometry_msgs.msg import TransformStamped, PoseWithCovarianceStamped
+    from nav_msgs.msg import Odometry, OccupancyGrid
+    from sensor_msgs_py import point_cloud2
+    from std_msgs.msg import Header
+    from tf2_ros import StaticTransformBroadcaster
+    from vision_msgs.msg import Detection2D, ObjectHypothesisWithPose
+    from dubdash.navigation_supervisor import NavigationSupervisor
+
+    probe, executor, nodes, wait = ros
+    supervisor = NavigationSupervisor()
+    nodes.append(supervisor)
+    executor.add_node(supervisor)
+    health, clouds = [], []
+    probe.create_subscription(Bool, '/perception/healthy', health.append, 10)
+    probe.create_subscription(PointCloud2, '/obstacles/points', clouds.append, 10)
+    broadcaster = StaticTransformBroadcaster(probe)
+    transforms = []
+    for parent, child in [('map', 'odom'), ('odom', 'base_link')]:
+        transform = TransformStamped()
+        transform.header.frame_id, transform.child_frame_id = parent, child
+        transform.header.stamp = probe.get_clock().now().to_msg()
+        transform.transform.rotation.w = 1.0
+        transforms.append(transform)
+    broadcaster.sendTransform(transforms)
+    occupancy = OccupancyGrid()
+    occupancy.header.frame_id = 'map'
+    occupancy.info.width = occupancy.info.height = 2
+    occupancy.info.resolution = .1
+    occupancy.data = [0]*4
+    supervisor.map(occupancy)
+
+    def publish(person=False, ground=True):
+        stamp = probe.get_clock().now().to_msg()
+        header = Header(stamp=stamp, frame_id='base_link')
+        cloud = point_cloud2.create_cloud_xyz32(header,
+            [[1., 0., .2], [1., .1, .2], [1., -.1, .2], [1., 0., 0.]])
+        cloud.height, cloud.width = 2, 2
+        cloud.row_step = 2*cloud.point_step
+        supervisor.cloud(cloud)
+        detection = Detection2DArray(header=header)
+        if person:
+            box, hypothesis = Detection2D(), ObjectHypothesisWithPose()
+            hypothesis.hypothesis.class_id, hypothesis.hypothesis.score = 'person', .9
+            box.results.append(hypothesis)
+            detection.detections.append(box)
+        supervisor.detections(detection)
+        if ground:
+            supervisor.ground(DiagnosticArray(header=header,
+                status=[DiagnosticStatus(name='ground_support', level=DiagnosticStatus.OK)]))
+        odom = Odometry(header=Header(stamp=stamp, frame_id='odom'), child_frame_id='base_link')
+        odom.pose.pose.orientation.w = 1.
+        supervisor.odometry(odom)
+        pose = PoseWithCovarianceStamped(header=Header(stamp=stamp, frame_id='map'))
+        pose.pose.pose.orientation.w = 1.
+        for index in (0, 7, 35):
+            pose.pose.covariance[index] = .01
+        supervisor.localization(pose)
+
+    wait(lambda: health and health[-1].data and clouds, publish)
+    assert clouds[-1].header.frame_id == 'base_link'
+    assert clouds[-1].width == 3  # Ground-height point removed, no clearing ray.
+    health.clear()
+    wait(lambda: health and not health[-1].data, lambda: publish(ground=False))
+    wait(lambda: health[-1].data, publish)
+    health.clear()
+    wait(lambda: health and not health[-1].data, lambda: publish(person=True))
+
+
 @pytest.fixture
 def ros():
     rclpy.init()

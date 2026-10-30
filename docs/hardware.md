@@ -24,8 +24,9 @@ Publish measured transforms from `base_link` through the camera mounts to both
 optical frames; optical axes are x right, y down, z forward. Never use guessed
 baseline or mounting transforms for driving.
 
-The IMX219-83 lacks hardware synchronization. Record a moving target and a moving
-robot, compare disparity and known distances, and quantify failure rate in sun,
+The team now identifies the cameras as IMX319; the board and hardware synchronization
+capability are unconfirmed. Record a moving target and a moving robot, compare
+disparity and known distances, and quantify failure rate in sun,
 shadow and low texture. Exact timestamp matching does not prove simultaneous
 exposure. Switch cameras if the measured error exceeds the stopping budget.
 
